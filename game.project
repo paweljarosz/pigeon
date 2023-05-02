@@ -13,4 +13,9 @@ input_method = HiddenInputField
 
 [project]
 title = Pigeon
+publisher = Paweł Jarosz
+developer = Paweł Jarosz
+
+[library]
+include_dirs = pigeon
 

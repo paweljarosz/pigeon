@@ -1,0 +1,82 @@
+local pigeon = require "pigeon.pigeon"
+
+function init(self)
+	-- Simplest usage:
+	--
+	-- To receive any message from pigeon to this script use pigeon.subscribe:
+	pigeon.subscribe("empty_message")
+	-- To send message to all subscribers use pigeon.send:
+	pigeon.send("empty_message")
+
+	-- Message data definition and verification:
+	--
+	-- Messages doesn't need to be defined and will be send anyway.
+	-- But you can define the message data - which keys are needed and what are expected types of values.
+	-- This gives you (runtime) safety, which is great for developing.
+	-- If message data is defined for given message_id,
+	-- the provided data will be always verified, when sending such message.
+	-- To define message with data to be verified use pigeon.define:
+	pigeon.define("message_with_data", { label_text = "string" })
+	pigeon.subscribe("message_with_data")
+	pigeon.send("message_with_data", { label_text = "Verified string." })
+
+	-- Veriied Defold built-in system messages:
+	--
+	-- All Defold system messages are defined in Pigeon (in 'letters' module)
+	-- You can safely send system messages and all needed data will be verified,
+	-- so you will be not allowed to send incorrect message data:
+	pigeon.subscribe("set_parent")
+	pigeon.send("set_parent", {parent_id = go.get_id("/parent"), keep_world_transform = 1})
+
+	-- Addding hooks
+	--
+	-- Hooks can be added, when subscribing the given message.
+	-- Hooks are functions called immediately when the message is sent (so in the sender's context)
+	local hook = function()
+		print("I'm a hook!")
+	end
+	pigeon.subscribe("message_with_hook", hook)
+	pigeon.send("message_with_hook")
+
+	-- Specifying subscriber's url
+	--
+	-- Default subscriber's url is the script from which the pigeon.subscribe function was called.
+	-- You can change this giving the third parameter another url:
+	pigeon.subscribe("message_with_different_url", _, msg.url())
+	pigeon.send("message_with_different_url")
+
+	-- Replacing Defold's msg.post / Sending to a specified url
+	--
+	-- pigeon.send propagates message to all subscribers, but you can also use
+	-- pigeon.send_to function to send to a specified url.
+	-- It will send the message only to specified url and would not save it as a subscriber.
+	-- Though, if the message is defined it will be additionally checked before sending.
+	pigeon.define("defold_compatible_message", { label_text = "string" })
+	pigeon.send_to(msg.url(), "defold_compatible_message", { label_text = "Verified string." })
+
+	-- Tests
+	-- Test module provide functional tests for Pigeon.
+	-- Results are printed in the console without internal logs.
+	local pigeon_test = require "pigeon.test"
+	pigeon_test.run()
+end
+
+function on_message(self, message_id, message, sender)
+	-- You can handle messages as usual:
+	if message_id == hash("empty_message") then
+		print("Received empty mesage from Pigeon!")
+		label.set_text("#label", "Received test mesage from Pigeon!")
+
+	elseif message_id == hash("message_with_data") then
+		print("Received mesage from Pigeon with verified data: "..message.label_text)
+		label.set_text("#label1", "Received mesage from Pigeon with verified data: "..message.label_text)
+
+	elseif message_id == hash("message_with_different_url") then
+		print("Received mesage from Pigeon with specified url.")
+		label.set_text("#label2", "Received mesage from Pigeon with specified url.")
+
+	elseif message_id == hash("defold_compatible_message") then
+		print("Received Defold compatible mesage from Pigeon with verified data: "..message.label_text)
+		label.set_text("#label3", "Received Defold compatible mesage from Pigeon with verified data: "..message.label_text)
+	end
+end

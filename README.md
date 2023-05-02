@@ -16,8 +16,12 @@ Uses "Defold Hashed" for pre-hashing by Sergey Lerg:
 Can utilise "Log" for logging and saving logs by Brian "Subsoap" Kramer:
 ["https://github.com/subsoap/log"](https://github.com/subsoap/log)
 
+Current version: 1.0
+
+Current Defold API: 1.4.5
 
 By Pawel Jarosz, 2023
+
 License: MIT
 
 

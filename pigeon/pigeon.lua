@@ -307,7 +307,7 @@ local function send(message_id, message)
 	-- If there are more messages in queue, send them
 	if (message_queue_count == 1) and next(message_queue) then
 		for _, queued_msg in ipairs(message_queue) do
-			send(queued_msg.hashed_message_id, queued_msg.message)
+			send(queued_msg.message_id, queued_msg.message)
 		end
 		message_queue = {}
 	end

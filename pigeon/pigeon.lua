@@ -282,7 +282,7 @@ local function send(message_id, message)
 	local event = events[hashed_message_id]
 	if not event then
 		log.e("Pigeon: Failed to send message, id: "..(message_id or "")..". Message_id is not subscribed to anything.", default_tag)
-		return true
+		return false
 	end
 
 	message = message or {}

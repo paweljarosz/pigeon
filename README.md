@@ -146,6 +146,31 @@ EXAMPLE:
 ```
 ---
 
+## FAQ
+
+*Problem*: My game objects are initialized at the same time, I want to send messages from the `init()` of one of them. Pigeon complains that there's no subscriber, but the other Game Object is subscribing from its `init()`.
+
+*Solution*: 
+
+The Defold manual states that the [order of game object initialization cannot be controlled](https://defold.com/manuals/application-lifecycle/#:~:text=The%20order%20in%20which%20game%20object%20component%20init()%20functions%20are%20called%20is%20unspecified.%20You%20should%20not%20assume%20that%20the%20engine%20initializes%20objects%20belonging%20to%20the%20same%20collection%20in%20a%20certain%20order.). One way to solve this issue is by delaying the call to `pigeon.send()` so the other game objects have time to initialize. 
+See this [Forum thread](https://forum.defold.com/t/pigeon-easy-and-safe-messaging-library-for-defold/73187/10)  for details.
+
+```
+local pigeon = require "pigeon.pigeon"
+local H = require "pigeon.hashed"
+
+function init(self)
+    msg.post("#", H.late_init)
+end
+
+function on_message(self, message_id, message)
+    if message_id == H.late_init then
+        -- do late-initialization here
+        pigeon.send("to_other_subscriber")
+    end
+end
+```
+
 ## Tests
 
 To check if Pigeon is working properly you can run a set of unit and functional tests from the test module:

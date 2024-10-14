@@ -412,7 +412,15 @@ end
 -- @param	tag			[string]	- change default tag ("pigeon") to your own
 function M.set_dependency_module_log(module, tag)
 	if module then
-		log = module
+		if module.name  and type(module.name ) == "string" then
+			log.i = function(text) module:info(text) end
+			log.w = function(text) module:warn(text) end
+			log.e = function(text) module:error(text) end
+			log.d = function(text) module:debug(text) end
+			log.t = function(text) module:trace(text) end
+		else
+			log = module
+		end
 	else
 		log_is_print()
 	end

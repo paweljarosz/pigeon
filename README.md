@@ -16,15 +16,26 @@ Uses "Defold Hashed" for pre-hashing by Sergey Lerg:
 Can utilise "Log" for logging and saving logs by Brian "Subsoap" Kramer:
 ["https://github.com/subsoap/log"](https://github.com/subsoap/log)
 
-Current Pigeon version: 1.1
+or "Defold-Log" by Maksim "Insality" Tuprikov:
+["https://github.com/Insality/defold-log"](https://github.com/Insality/defold-log)
 
-Current Defold API version: 1.6.2
+Current Pigeon version: 1.2
 
-By Pawel Jarosz, 2023-2024
+Current Defold API version: 1.9.3
+
+By Paweł Jarosz, 2023-2024
 
 License: MIT
 
 ## Revisions
+
+#### 1.2 - Oct 2024
+* Added possibility to use another logger - [Defold-Log by Insality](https://github.com/Insality/defold-log). Quick Reference:
+    ```lua
+	    local insality_log = require "log.log"
+		pigeon.set_dependency_module_log(insality_log.get_logger("pigeon"))
+	```
+* Replaced deprecated system font with always on top font.
 
 #### 1.1 - Jan 2024
 * bugfix: `pigeon.send()` now correctly returns `false`, when no subscribers are subscribed to the given message and message is therfore not sent. Thanks to [LaksVister](https://github.com/LaksVister) for finding it out!
@@ -38,7 +49,7 @@ In order to use Pigeon in your Defold game add it to your [game.project](defold:
 
 Once added, you must require the main Lua module in scripts via
 
-```
+```lua
 local pigeon = require("pigeon.pigeon")
 ```
 
@@ -141,8 +152,13 @@ Note! The correctness of arguments is not checked! Use responsibly!
 * **PARAMETER:**	`tag`			[string]	- change default tag ("pigeon") to your own
 EXAMPLE:
 ```
-    local log = require "log.log"
-	pigeon.set_dependency_module_log(log)
+    local subsoap_log = require "log.log"
+	pigeon.set_dependency_module_log(subsoap_log)
+```
+or:
+```
+	local insality_log = require "log.log"
+	pigeon.set_dependency_module_log(insality_log.get_logger("pigeon"))
 ```
 ---
 

@@ -15,7 +15,7 @@ input_method = HiddenInputField
 title = Pigeon
 publisher = Paweł Jarosz
 developer = Paweł Jarosz
-version = 1.3
+version = 1.2
 
 [library]
 include_dirs = pigeon

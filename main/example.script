@@ -54,6 +54,12 @@ function init(self)
 	pigeon.define("defold_compatible_message", { label_text = "string" })
 	pigeon.send_to(msg.url(), "defold_compatible_message", { label_text = "Verified string." })
 
+	pigeon.define("multi_type_defined_message", { label_text = "string|number|nil" })
+	pigeon.send_to(msg.url(), "multi_type_defined_message", { label_text = "Verified string." })
+	pigeon.send_to(msg.url(), "multi_type_defined_message", { label_text = 1 })
+	pigeon.send_to(msg.url(), "multi_type_defined_message", { })
+	pigeon.send_to(msg.url(), "multi_type_defined_message")
+
 	-- Tests
 	-- Test module provide functional tests for Pigeon.
 	-- Results are printed in the console without internal logs.
@@ -70,6 +76,10 @@ function on_message(self, message_id, message, sender)
 	elseif message_id == hash("message_with_data") then
 		print("Received mesage from Pigeon with verified data: "..message.label_text)
 		label.set_text("#label1", "Received mesage from Pigeon with verified data: "..message.label_text)
+
+	elseif message_id == hash("multi_type_defined_message") then
+		print("Received mesage from Pigeon with verified multi type data: "..(message and message.label_text or ""))
+		--label.set_text("#label1", "Received mesage from Pigeon with verified data: "..message.label_text)
 
 	elseif message_id == hash("message_with_different_url") then
 		print("Received mesage from Pigeon with specified url.")

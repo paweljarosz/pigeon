@@ -9,3 +9,5 @@ Thumbs.db
 .cproject
 builtins
 /.editor_settings
+/.defold/*
+.vscode

@@ -1,6 +1,13 @@
 local pigeon = require "pigeon.pigeon"
 
 function init(self)
+	-- Tests
+	-- Test module provides functional tests for Pigeon.
+	-- Run first, then clear subscriptions to keep example behavior deterministic.
+	local pigeon_test = require "pigeon.test"
+	pigeon_test.run()
+	pigeon.unsubscribe_all()
+
 	-- Simplest usage:
 	--
 	-- To receive any message from pigeon to this script use pigeon.subscribe:
@@ -10,13 +17,14 @@ function init(self)
 
 	-- Message data definition and verification:
 	--
-	-- Messages doesn't need to be defined and will be send anyway.
+	-- Messages don't need to be defined and will be send anyway.
 	-- But you can define the message data - which keys are needed and what are expected types of values.
-	-- This gives you (runtime) safety, which is great for developing.
+	-- This is then checked at runtime, which is great for developing.
 	-- If message data is defined for given message_id,
 	-- the provided data will be always verified, when sending such message.
+	-- You can also concatenate multiple times with "|", e.g. "string|nil"
 	-- To define message with data to be verified use pigeon.define:
-	pigeon.define("message_with_data", { label_text = "string" })
+	pigeon.define("message_with_data", { label_text = "string|nil" })
 	pigeon.subscribe("message_with_data")
 	pigeon.send("message_with_data", { label_text = "Verified string." })
 
@@ -28,21 +36,27 @@ function init(self)
 	pigeon.subscribe("set_parent")
 	pigeon.send("set_parent", {parent_id = go.get_id("/parent"), keep_world_transform = 1})
 
-	-- Addding hooks
+	-- Adding hooks with context
 	--
-	-- Hooks can be added, when subscribing the given message.
-	-- Hooks are functions called immediately when the message is sent (so in the sender's context)
-	local hook = function()
-		print("I'm a hook!")
+	-- Hooks are functions called immediately and synchronously when pigeon.send() is called,
+	-- before msg.post delivers the message to regular subscribers.
+	-- The hook receives (message_id, message, context) where context is the table
+	-- provided by the SUBSCRIBER at subscribe-time — not by the sender.
+	-- This means the subscriber can pass e.g. `self` as context and the hook
+	-- can safely access instance-specific data (like game object ids, positions, etc.).
+	-- Defold APIs with explicit target id (go.set_position(id, pos), etc.) work correctly
+	-- inside hooks regardless of which script triggered pigeon.send().
+	local hook = function(message_id, message, ctx)
+		print("Hook fired! Context: " .. tostring(ctx))
 	end
-	pigeon.subscribe("message_with_hook", hook)
+	pigeon.subscribe("message_with_hook", hook, nil, { my_data = 42 })
 	pigeon.send("message_with_hook")
 
 	-- Specifying subscriber's url
 	--
 	-- Default subscriber's url is the script from which the pigeon.subscribe function was called.
 	-- You can change this giving the third parameter another url:
-	pigeon.subscribe("message_with_different_url", _, msg.url())
+	pigeon.subscribe("message_with_different_url", nil, msg.url())
 	pigeon.send("message_with_different_url")
 
 	-- Replacing Defold's msg.post / Sending to a specified url
@@ -58,16 +72,96 @@ function init(self)
 	pigeon.send_to(msg.url(), "multi_type_defined_message", { label_text = "Verified string." })
 	pigeon.send_to(msg.url(), "multi_type_defined_message", { label_text = 1 })
 	pigeon.send_to(msg.url(), "multi_type_defined_message", { })
+
+	-- pigeon.send_to is equivalent to Defold's msg.post with optional schema validation
 	pigeon.send_to(msg.url(), "multi_type_defined_message")
 
-	-- Tests
-	-- Test module provide functional tests for Pigeon.
-	-- Results are printed in the console without internal logs.
-	local pigeon_test = require "pigeon.test"
-	pigeon_test.run()
+	-- Unsubscribing a specific subscription:
+	--
+	-- pigeon.subscribe returns a subscription id that can be used to unsubscribe later:
+	local temp_id = pigeon.subscribe("temporary_message")
+	pigeon.send("temporary_message")
+	pigeon.unsubscribe(temp_id)
+
+	-- Batch extending letters (message definitions):
+	--
+	-- You can define multiple messages at once using pigeon.define_batch:
+	pigeon.define_batch({
+		batch_a = { id = "batch_a", data = { value = "string" } },
+		batch_b = { id = "batch_b", data = { value = "number" } }
+	})
+
+	-- Dynamic subscription management:
+	--
+	-- You can add or remove message subscriptions from an existing subscriber:
+	local dynamic_id = pigeon.subscribe("dynamic_msg_a") --[[@as number]]
+	pigeon.extend_subscription(dynamic_id, "dynamic_msg_b")
+	pigeon.send("dynamic_msg_a")
+	pigeon.send("dynamic_msg_b")
+	pigeon.reduce_subscription(dynamic_id, "dynamic_msg_a")
+	pigeon.unsubscribe(dynamic_id)
+
+	-- Accessing letters (message definitions):
+	--
+	-- All defined messages are available in pigeon.letters:
+	local set_parent_def = pigeon.letters[hash("set_parent")]
+	print("set_parent definition id: " .. tostring(set_parent_def and set_parent_def.id or ""))
+
+	-- Toggling logging:
+	--
+	-- You can enable or disable Pigeon's internal logging:
+	pigeon.toggle_logging(false)
+	pigeon.send("empty_message")
+	pigeon.toggle_logging(true)
+
+	-- Convenience instance with pigeon.new:
+	--
+	-- pigeon.new creates a handler instance that auto-subscribes to given messages
+	-- and dispatches them in on_message. Call handler:final() in final() to clean up.
+	self.pigeon_handler = pigeon.new({
+		[hash("instance_message")] = function(message, sender)
+			print("Instance handler received: instance_message")
+			label.set_text("#label5", "Instance handler received: instance_message")
+		end
+	})
+	pigeon.send("instance_message")
+
+	-- Hook/context demo with 2 scripts (see example_receiver.script):
+	--
+	-- Script A (this script) sends "hook_demo_tick" every second.
+	-- Script B (example_receiver.script) subscribes with hook + context=self.
+	-- When A calls pigeon.send("hook_demo_tick"), B's hook fires immediately
+	-- (still inside A's pigeon.send call) with B's `self` as context.
+	-- The hook reads B's current position from context (self.position).
+	-- Then msg.post delivers the message to B's on_message, where B compares
+	-- the position seen by the hook vs the current position and reports back.
+	-- This demonstrates that hook context belongs to the subscriber, not the sender.
+	pigeon.define("hook_demo_tick", { tick = "number" })
+	pigeon.define("hook_demo_report", {
+		tick = "number",
+		order_ok = "boolean",
+		hook_position = "number",
+		on_message_position = "number"
+	})
+	pigeon.subscribe("hook_demo_report")
+	self.hook_demo_tick = 0
+	self.hook_demo_timer = 0
+	label.set_text("#label4", "Hook demo: waiting for report from B")
+end
+
+function update(self, dt)
+	self.hook_demo_timer = self.hook_demo_timer + dt
+	if self.hook_demo_timer >= 1 then
+		self.hook_demo_timer = 0
+		self.hook_demo_tick = self.hook_demo_tick + 1
+		pigeon.send("hook_demo_tick", { tick = self.hook_demo_tick })
+	end
 end
 
 function on_message(self, message_id, message, sender)
+	-- Dispatch to pigeon.new instance handler:
+	self.pigeon_handler:on_message(message_id, message, sender)
+
 	-- You can handle messages as usual:
 	if message_id == hash("empty_message") then
 		print("Received empty mesage from Pigeon!")
@@ -88,5 +182,20 @@ function on_message(self, message_id, message, sender)
 	elseif message_id == hash("defold_compatible_message") then
 		print("Received Defold compatible mesage from Pigeon with verified data: "..message.label_text)
 		label.set_text("#label3", "Received Defold compatible mesage from Pigeon with verified data: "..message.label_text)
+
+	elseif message_id == hash("hook_demo_report") then
+		local report_text = string.format(
+			"B pos hook/on: %.2f / %.2f | tick=%d | hook_first=%s",
+			message.hook_position,
+			message.on_message_position,
+			message.tick,
+			message.order_ok and "yes" or "no"
+		)
+		print(report_text)
+		label.set_text("#label4", report_text)
 	end
+end
+
+function final(self)
+	self.pigeon_handler:final()
 end

@@ -1,0 +1,52 @@
+local pigeon = require "pigeon.pigeon"
+
+local HOOK_DEMO_TICK = hash("hook_demo_tick")
+
+local function tick_hook(message_id, message, context)
+	if message_id ~= HOOK_DEMO_TICK then
+		return
+	end
+
+	context.hook_called = true
+	context.hook_tick = message.tick
+	context.hook_position = context.position
+end
+
+function init(self)
+	self.position = 0
+	self.speed = 120
+	self.hook_called = false
+	self.hook_tick = 0
+	self.hook_position = 0
+
+	-- Subscribe once with hook (sender-side sync callback) and once without hook
+	-- so this script also receives on_message.
+	self.hook_subscription_id = pigeon.subscribe("hook_demo_tick", tick_hook, msg.url(), self)
+	self.receive_subscription_id = pigeon.subscribe("hook_demo_tick", nil, msg.url())
+end
+
+function update(self, dt)
+	self.position = self.position + self.speed * dt
+end
+
+function on_message(self, message_id, message, sender)
+	if message_id ~= HOOK_DEMO_TICK then
+		return
+	end
+
+	local order_ok = self.hook_called and self.hook_tick == message.tick
+	pigeon.send_to(sender, "hook_demo_report", {
+		tick = message.tick,
+		order_ok = order_ok,
+		hook_position = self.hook_position,
+		on_message_position = self.position
+	})
+
+	self.hook_called = false
+	self.hook_tick = 0
+	self.hook_position = 0
+end
+
+function final(self)
+	pigeon.unsubscribe({self.hook_subscription_id, self.receive_subscription_id})
+end

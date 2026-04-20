@@ -205,6 +205,14 @@ function M.run()
 	-- send_to direct API (not through post alias)
 	test("send_to sends to valid url string.", pigeon.send_to(".", "post_alias_test"))
 	test("send_to rejects invalid url type.", not pigeon.send_to(1, "test"))
+	test("send_to rejects nil target without crashing.", not pigeon.send_to(nil, "test"))
+	test("send_to rejects boolean target without crashing.", not pigeon.send_to(true, "test"))
+	test("send_to rejects table target without crashing.", not pigeon.send_to({}, "test"))
+
+	-- send_to accepts the same target forms as msg.post: url, string, and hash (game object id)
+	test("send_to accepts url userdata returned by msg.url().", pigeon.send_to(msg.url(), "post_alias_test"))
+	test("send_to accepts hash target (game object id form, like factory.create return value).",
+		pigeon.send_to(hash("/nonexistent_but_valid_hash_target"), "post_alias_test"))
 
 	-- pigeon.new() convenience instance
 	local new_calls = {}

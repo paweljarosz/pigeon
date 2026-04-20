@@ -1,7 +1,7 @@
 --
 -- Pigeon
 --
--- Version: 1.4
+-- Version: 1.5
 --
 -- Read details in the README.md file.
 --
@@ -45,7 +45,7 @@ local PigeonImpl = require "pigeon.pigeon_impl"
 ---@field unsubscribe fun(id: number|number[]|boolean|nil): boolean
 ---@field unsubscribe_all fun(): boolean
 ---@field send fun(message_id: MessageId, message?: table): boolean
----@field send_to fun(url: url|userdata|string, message_id: MessageId, message?: table): boolean
+---@field send_to fun(url: url|userdata|string|hash, message_id: MessageId, message?: table): boolean
 ---@field toggle_logging fun(enable: boolean): boolean
 ---@field set_dependency_module_log fun(module: table|nil, tag?: string): boolean
 ---@field set_dependency_module_hashed fun(module: function): boolean @Deprecated, no-op.
@@ -135,11 +135,14 @@ function Pigeon.send(message_id, message)
 end
 
 ---Equivalent to Defold built-in `msg.post`. Sends a message of given message_id with an optional data in message table to a specified url.
+---Accepts the same target forms as `msg.post`: a `url` userdata, a url-like
+---`string` (e.g. "/gui#hud" or "#fragment"), or a `hash` game object id
+---(e.g. the id returned by `factory.create` or `go.get_id`).
 ---Additionally, Pigeon checks in runtime if message is correct if defined.
----@param	url			url|string	@Target's url.
----@param	message_id	MessageId			@Defold message_id string or hashed. It will be prehashed anyway.
----@param	message?	table				@Optional message table to check.
----@return				boolean				@True if data is correct and send succesfully, false otherwise.
+---@param	url			url|string|hash|userdata	@Target's url, url-like string, or game object hash id.
+---@param	message_id	MessageId					@Defold message_id string or hashed. It will be prehashed anyway.
+---@param	message?	table						@Optional message table to check.
+---@return				boolean						@True if data is correct and send succesfully, false otherwise.
 function Pigeon.send_to(url, message_id, message)
 	return PigeonImpl.send_to(url, message_id, message)
 end

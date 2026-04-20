@@ -11,7 +11,7 @@ Pigeon is a Defold messaging helper focused on easier and safer runtime communic
 
 ![Pigeon logo](assets/pigeon_hero.png)
 
-Newest Pigeon version is 1.4, verified with Defold 1.12.2.
+Newest Pigeon version is 1.5, verified with Defold 1.12.4.
 
 By Paweł Jarosz, 2023-2026
 
@@ -24,7 +24,7 @@ In order to use Pigeon in your Defold game add it to your [game.project](defold:
 Newest version link:
 
 ```lua
-https://github.com/paweljarosz/pigeon/archive/refs/tags/v1.4.zip
+https://github.com/paweljarosz/pigeon/archive/refs/tags/v1.5.zip
 ```
 
 Once added, you must require the main Lua module in scripts via:
@@ -315,10 +315,13 @@ pigeon.send("game_over")
 ### Pigeon.send_to(url, message_id, message?)
 
 Equivalent to `msg.post(url, message_id, message)` with optional schema validation.
+Accepts the same target forms as `msg.post`: a `url` userdata, a url-like
+`string` (e.g. `"/gui#hud"` or `"#fragment"`), or a `hash` game object id
+(e.g. the id returned by `factory.create` or `go.get_id`).
 
 | | name | type | description |
 |-|-|-|-|
-|param| `url` | `url\|string` | Target URL. |
+|param| `url` | `url\|string\|hash` | Target URL, url-like string, or game object hash id. |
 |param| `message_id` | `string\|userdata` | Message id to send. |
 |param| `message?` | `table\|nil` | Optional message payload. |
 |return| | `boolean` | `true` if sent, `false` on invalid url or data. |
@@ -330,6 +333,10 @@ Example:
 ```lua
 pigeon.send_to(msg.url(), "set_parent", { parent_id = go.get_id("/parent"), keep_world_transform = 1 } )
 pigeon.send_to("/gui#hud", "update_score", { score = 100 } )
+
+-- Passing a game object id (hash) returned by factory.create, just like msg.post does:
+local instance_id = factory.create("#cell_factory")
+pigeon.send_to(instance_id, "cell_was_created", { position_in_tiles = position_in_tiles })
 ```
 
 ---
@@ -507,6 +514,25 @@ pigeon_test.run()
 
 
 ## Changelog
+
+### 1.5 - Apr 2026
+
+* UPDATE: `pigeon.send_to()` now accepts the same target forms as Defold's built-in `msg.post()`. In addition to a `url` userdata and a url-like `string`, you can now pass a `hash` game object id directly — for example the id returned by `factory.create` or `go.get_id`.
+
+```lua
+-- All of these now work with pigeon.send_to, exactly like msg.post:
+local instance_id = factory.create("#cell_factory")
+pigeon.send_to(instance_id, "cell_was_created", { position_in_tiles = position_in_tiles })
+pigeon.send_to(msg.url(instance_id), "cell_was_created", { position_in_tiles = position_in_tiles })
+pigeon.send_to("/gui#hud", "update_score", { score = 100 })
+pigeon.send_to(msg.url(), "set_parent", { parent_id = go.get_id("/parent") })
+```
+
+* FIX: `pigeon.send_to()` no longer crashes when called with an invalid target (e.g. `nil`, `boolean`, `table`). Previously the internal error log attempted to concatenate the target value with a string, which raised an error for userdata/non-string values. Invalid targets are now safely rejected with `false` and a proper error message.
+
+* UPDATE: Added tests covering the new target forms (`url`, `string`, `hash`) and safe rejection of invalid types in `pigeon.send_to()`.
+
+* Version 1.5 is fully backward compatible with 1.4 — only accepted target types are widened; all existing calls keep working unchanged.
 
 ### 1.4 - Feb 2026
 

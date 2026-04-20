@@ -530,20 +530,23 @@ function PigeonImpl.send(message_id, message)
 	return true
 end
 
----Send a message to a specified url
----@param url url|string @Target url
+---Send a message to a specified url or game object id.
+---Accepts the same target forms as Defold's `msg.post`: a `url` userdata,
+---a url-like `string` (e.g. "/gui#hud" or "#fragment"), or a `hash`
+---(e.g. the id returned by `factory.create` or `go.get_id`).
+---@param url url|string|hash @Target url, url-like string, or game object hash id
 ---@param message_id string|hash @Defold message_id string or hashed
 ---@param message? table @Optional message table to check
 ---@return boolean @True if data is correct and sent successfully, false otherwise
 function PigeonImpl.send_to(url, message_id, message)
-	if not typer.is_type(url, {"url", "string"}) then
-		log.error("Failed to send. 'url' is invalid: " .. url)
+	if not is_url_value(url) then
+		log.error("Failed to send. 'url' is invalid: " .. tostring(url))
 		return false
 	end
 
 	local hashed_message_id = ensure_hashed(message_id)
 	if not hashed_message_id then
-		log.error("Failed to send. Invalid 'message_id': " .. message_id)
+		log.error("Failed to send. Invalid 'message_id': " .. tostring(message_id))
 		return false
 	end
 
